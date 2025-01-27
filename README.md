@@ -1,6 +1,29 @@
 # check_vmware_datastores
 nagios check using VMware PowerCLI for snapshot health
 
+# Requirements
+PowerShell for Linux and VMware PowerCLI installed on nagios server
+
+# Installation Steps
+
+Install PowerShell on Linux
+```
+yum install https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-1.rh.x86_64.rpm
+```
+
+Add VMware PowerCLI from the PowerShell Gallery
+```
+[root@linuxbox]# pwsh
+PowerShell 7.4.6
+PS /home/someuser> Install-Module -Name VMware.PowerCLI -Scope AllUsers
+```
+
+Disable the PowerCLI call-home to VMware for usage statistics reporting.
+```
+[root@linuxbox]# pwsh
+PowerShell 7.4.6
+PS> Set-PowerCLIConfiguration -Scope AllUsers -ParticipateInCEIP $false
+```
 
 # Sample output
 
