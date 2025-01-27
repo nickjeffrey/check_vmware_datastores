@@ -72,6 +72,7 @@ Click OK
 
 Copy the check script and config file to the appropriate plugins folder and confirm the script is executable
 ```
+su - nagios
 cd /tmp
 git clone https://github.com/nickjeffrey/check_vmware_snapshots
 cd check_vmware_snapshots
@@ -79,11 +80,12 @@ cp check_vmware_snapshots.cfg /usr/local/nagios/libexec/check_vmware_snapshots.c
 cp check_vmware_snapshots     /usr/local/nagios/libexec/check_vmware_snapshots
 chown nagios:nagios           /usr/local/nagios/libexec/check_vmware_snapshots.cfg
 chown nagios:nagios           /usr/local/nagios/libexec/check_vmware_snapshots
-chmod +x                      /usr/local/nagios/libexec/check_vmware_snapshots
+chmod 744                     /usr/local/nagios/libexec/check_vmware_snapshots.cfg
+chmod 755                     /usr/local/nagios/libexec/check_vmware_snapshots
 ```
 
 
-Copy the *.cfg file to /usr/local/nagios/libexec/check_vmware_snapshots.cfg, and adjust as appropriate for your environment.
+Edit the *.cfg file to /usr/local/nagios/libexec/check_vmware_snapshots.cfg, adjusting as appropriate for your environment.
 ```
 # config file for check_vmware_snapshots script
 # lines beginning with a hash mark # are ignored
