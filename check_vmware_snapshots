@@ -9,6 +9,10 @@
 # Fix up the credentials, currently hardcoded in this script, put password hash in file
 # Add a $max_gb_for_all_snapshots variable so we can specify a total amount of space to be consumed by snapshots
 # The commands.cfg has $HOSTADDRESS$ in the command, but the script pulls the target IP address from the .cfg file rather than $HOSTADDRESS$
+# Figure out if these two PowerCLI settings are needed:
+#   Set-PowerCLIConfiguration -DefaultVIServerMode Multiple -Confirm:$False
+#   Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$False
+   
 
 
 # CHANGE LOG
