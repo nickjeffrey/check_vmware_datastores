@@ -43,8 +43,8 @@ function Get-VMware-Snapshots {
 
    # Import site-specific details from config file.
    # There should be a check_vmware_snapshots.cfg file in the same directory as this script, with contents similar to the following.
-   # Note that ll lines in the config file starting with # will be ignored, so you can include comments.
-   #vcenter=198.18.18.100
+   # Note that all lines in the config file starting with # will be ignored, so you can include comments.
+   #vcenter=vcsa.example.com
    #username=nagios@vsphere.local
    #password=MySecretPassw0rd!
    #max_gb_per_snapshot=10
