@@ -77,14 +77,28 @@ chmod +x                  /usr/local/nagios/libexec/check_vmware_snapshots
 
 Copy the *.cfg file to /usr/local/nagios/libexec/check_vmware_snapshots.cfg, and adjust as appropriate for your environment.
 ```
+# config file for check_vmware_snapshots script
+# lines beginning with a hash mark # are ignored
+# adjust the variables below to match your environment
+vcenter=vcsa.example.com
+username=nagios@vsphere.local
+password=MySecretPassw0rd!
+max_gb_per_snapshot=10
+max_snapshots_per_vm=3
+max_snapshot_age_days=7
+```
+
+Create a section similar to the following in the commands.cfg file on the nagios server.
+```
 # 'check_vmware_snapshots' command definition
 define command {
       command_name    check_vmware_snapshots
       command_line    $USER1$/check_vmware_snapshots $HOSTADDRESS$
       }
+
 ```
 
-Create a section similar to the following in the commands.cfg file on the nagios server.
+Create a section similar to the following in the services.cfg file on the nagios server.
 ```
 define service {
        use                             generic-service
@@ -93,10 +107,6 @@ define service {
        check_interval                  120              ; Actively check the host every 120 minutes
        check_command                   check_vmware_snapshots
        }
-```
-
-Create a section similar to the following in the services.cfg file on the nagios server.
-```
 ```
 
 
