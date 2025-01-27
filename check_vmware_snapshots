@@ -284,7 +284,7 @@ function Get-VMware-Snapshots {
    # Print any errors that were found in the format expected by nagios
    if ($error_count -gt 0) {
       Write-Host "$check_name WARN, $error_count issues found, please cleanup snapshots.  $error_message  total_snapshots:$totalSnapshots  largest_single_snapshot:$largestSnapshotSizeGB GB , total_size:$totalSnapshotSizeGB GB , oldest_snapshot:$oldestSnapshotDays days"
-      exit $OK
+      exit $WARN
    }
 
 
