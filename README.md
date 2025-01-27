@@ -65,6 +65,37 @@ Click OK
 <img src=images/changerole.png>
 
 
+# Nagios configuration
+
+Copy the check script to /usr/local/nagios/libexec/check_vmware/snapshots
+
+
+Copy the *.cfg file to /usr/local/nagios/libexec/check_vmware_snapshots.cfg, and adjust as appropriate for your environment.
+```
+# 'check_vmware_snapshots' command definition
+define command {
+      command_name    check_vmware_snapshots
+      command_line    $USER1$/check_vmware_snapshots $HOSTADDRESS$
+      }
+```
+
+Create a section similar to the following in the commands.cfg file on the nagios server.
+```
+define service {
+       use                             generic-service
+       host_name                       vcenter.example.com
+       service_description             VMware snapshots
+       check_interval                  120              ; Actively check the host every 120 minutes
+       check_command                   check_vmware_snapshots
+       }
+```
+
+Create a section similar to the following in the services.cfg file on the nagios server.
+```
+```
+
+
+
 # Sample output
 
 If everything is ok, output will look similar to:
