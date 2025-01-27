@@ -85,7 +85,7 @@ chmod 755                     /usr/local/nagios/libexec/check_vmware_snapshots
 ```
 
 
-Edit the *.cfg file to /usr/local/nagios/libexec/check_vmware_snapshots.cfg, adjusting as appropriate for your environment.
+Edit the config file at /usr/local/nagios/libexec/check_vmware_snapshots.cfg, adjusting as appropriate for your environment.
 ```
 # config file for check_vmware_snapshots script
 # lines beginning with a hash mark # are ignored
