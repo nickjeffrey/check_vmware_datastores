@@ -67,7 +67,12 @@ Click OK
 
 # Nagios configuration
 
-Copy the check script to /usr/local/nagios/libexec/check_vmware/snapshots
+Copy the check script to the appropriate plugins folder and confirm the script is executable
+```
+cp check_vmware_snapshots /usr/local/nagios/libexec/check_vmware_snapshots
+chown nagios:nagios  /usr/local/nagios/libexec/check_vmware_snapshots
+chmod +x  /usr/local/nagios/libexec/check_vmware_snapshots
+```
 
 
 Copy the *.cfg file to /usr/local/nagios/libexec/check_vmware_snapshots.cfg, and adjust as appropriate for your environment.
