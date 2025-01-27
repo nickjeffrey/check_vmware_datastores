@@ -6,9 +6,12 @@ PowerShell for Linux and VMware PowerCLI installed on nagios server
 
 # Installation Steps
 
-Install PowerShell on Linux
+Install PowerShell on the Linux-based nagios server.
+
+More details at https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux
 ```
-yum install https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-1.rh.x86_64.rpm
+which yum && yum install https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-1.rh.x86_64.rpm
+which apt && apt install https://github.com/PowerShell/PowerShell/releases/download/v7.4.7/powershell_7.4.7-1.deb_amd64.deb
 ```
 
 Add VMware PowerCLI from the PowerShell Gallery
