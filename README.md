@@ -25,6 +25,30 @@ PowerShell 7.4.6
 PS> Set-PowerCLIConfiguration -Scope AllUsers -ParticipateInCEIP $false
 ```
 
+## create vCenter userid
+
+Create a read-only user account on the vCenter server.  
+The nagios check will use these credentials to query vCenter for all the snapshots.
+Login to vCenter web interface, click Administration menu, Users and Groups
+<img src=images/adminmenu.png>
+
+Set the domain to vsphere.local, click Add.
+<img src=images/usersandgroups.png>
+
+Enter the user details, click Add.
+<img src=images/userdetails.png>
+
+## assign read-only role to vCenter userid
+Now we will assign a role to the nagios user so it has sufficient privilege to view snapshots.
+Note that this only gives the userid on the vCenter server enough permission to view snapshots, but not to create or delete snapshots.
+Click Global Permissions, Add.
+Set the domain to vsphere.local
+Set the user to nagios
+Set the Role to Read-Only
+Select the checkbox to Propagate to children  (to push the permission out to the ESXi hosts)
+Click OK
+<img src=images/changerole.png>
+
 # Sample output
 
 If everything is ok, output will look similar to:
