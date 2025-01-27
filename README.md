@@ -39,9 +39,13 @@ Login to vCenter web interface, click Administration menu, Users and Groups
 <img src=images/adminmenu.png>
 
 
+
+
 Set the domain to vsphere.local, click Add.
 
 <img src=images/usersandgroups.png>
+
+
 
 
 Enter the user details, click Add.
