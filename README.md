@@ -1,4 +1,4 @@
-# check_vmware_datastores
+# check_vmware_snapshots
 nagios check using VMware PowerCLI for snapshot health
 
 # Requirements
