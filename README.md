@@ -89,7 +89,7 @@ chmod 755                     /usr/local/nagios/libexec/check_vmware_snapshots
 ```
 
 
-Edit the config file at /usr/local/nagios/libexec/check_vmware_snapshots.cfg, adjusting as appropriate for your environment.
+Edit the default config file at /usr/local/nagios/libexec/check_vmware_snapshots.cfg, adjusting as appropriate for your environment.
 ```
 # config file for check_vmware_snapshots script
 # lines beginning with a hash mark # are ignored
@@ -107,12 +107,12 @@ Create a section similar to the following in the commands.cfg file on the nagios
 # 'check_vmware_snapshots' command definition
 define command {
       command_name    check_vmware_snapshots
-      command_line    $USER1$/check_vmware_snapshots $HOSTADDRESS$
+      command_line    $USER1$/check_vmware_snapshots 
       }
 
 ```
 
-Create a section similar to the following in the services.cfg file on the nagios server.
+Create a section similar to the following in the services.cfg file on the nagios server.  This will use the default config file.
 ```
 define service {
        use                             generic-service
@@ -121,6 +121,27 @@ define service {
        check_interval                  120              ; Actively check the host every 120 minutes
        check_command                   check_vmware_snapshots
        }
+```
+
+
+HINT: if you have multiple vCenter hosts, you can specify a custom config file for each stanza as shown below.
+```
+define service {
+       use                             generic-service
+       host_name                       vcenter1.example.com
+       service_description             VMware snapshots
+       check_interval                  120              ; Actively check the host every 120 minutes
+       check_command                   check_vmware_snapshots!/usr/local/nagios/libexec/check_vmware_snapshots.vcenter1.cfg
+       }
+
+define service {
+       use                             generic-service
+       host_name                       vcenter2.example.com
+       service_description             VMware snapshots
+       check_interval                  120              ; Actively check the host every 120 minutes
+       check_command                   check_vmware_snapshots!/usr/local/nagios/libexec/check_vmware_snapshots.vcenter2.cfg
+       }
+
 ```
 
 
