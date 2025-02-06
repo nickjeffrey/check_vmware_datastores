@@ -107,7 +107,7 @@ Create a section similar to the following in the commands.cfg file on the nagios
 # 'check_vmware_snapshots' command definition
 define command {
       command_name    check_vmware_snapshots
-      command_line    $USER1$/check_vmware_snapshots 
+      command_line    $USER1$/check_vmware_snapshots $ARG1$
       }
 
 ```
