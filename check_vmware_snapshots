@@ -10,14 +10,15 @@
 # Add a $max_gb_for_all_snapshots variable so we can specify a total amount of space to be consumed by snapshots
 # The commands.cfg has $HOSTADDRESS$ in the command, but the script pulls the target IP address from the .cfg file rather than $HOSTADDRESS$
 # Figure out if these two PowerCLI settings are needed:
-#   Set-PowerCLIConfiguration -DefaultVIServerMode Multiple -Confirm:$False
-#   Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$False
+#   Set-PowerCLIConfiguration -DefaultVIServerMode      Multiple -Confirm:$False
+#   Set-PowerCLIConfiguration -InvalidCertificateAction Ignore   -Confirm:$False
    
 
 
 # CHANGE LOG
 # ----------
 # 2025-01-23	njeffrey	Script created
+# 2025-02-05	njeffrey	Add option for custom config file
 
 
 # NOTES
@@ -27,288 +28,283 @@
 
 
 
-function Get-VMware-Snapshots {
-   #
-   if ($verbose -eq "yes") { Write-Host "" ; Write-Host "Running Get-VMware-Snapshots function" }
-   #
-   # declare variables
-   $check_name              = "VMware snapshots"  	#name of check 
-   $verbose                 = "no"			#yes|no flag to increase verbosity for debugging
-   $error_count             = 0  			#initialize counter variable
-   $error_message           = "" 			#initialize string variable used to hold message text
-   #
-   # nagios return codes
-   $OK=0
-   $WARN=1
-   $CRITICAL=2
-   $UNKNOWN=3
 
-
-
-   # Import site-specific details from config file.
-   # There should be a check_vmware_snapshots.cfg file in the same directory as this script, with contents similar to the following.
-   # Note that all lines in the config file starting with # will be ignored, so you can include comments.
-   #vcenter=vcsa.example.com
-   #username=nagios@vsphere.local
-   #password=MySecretPassw0rd!
-   #max_gb_per_snapshot=10
-   #max_snapshots_per_vm=3
-   #max_snapshot_age_days=7
-   #
-   #
-   # Define the path to the configuration file
-   $configFilePath = "/usr/local/nagios/libexec/check_vmware_snapshots.cfg"
-   #
-   # Check if the configuration file exists
-   if (-Not (Test-Path $configFilePath)) {
-      Write-Host "$check_name UNKNOWN - could not find configuration file $configFilePath"
-      exit $UNKNOWN
-   }
-   #
-   # Read the configuration file
-   $config = @{}
-   Get-Content $configFilePath | ForEach-Object {
-      if ($_ -match "^(?<Key>[^=]+)=(?<Value>.+)$") {
-         $config[$Matches.Key] = $Matches.Value
-      }
-   }
-   #
-   # Populate variables from the configuration
-   $vCenter = $config['vCenter']
-   $username = $config['username']
-   $password = ConvertTo-SecureString $config['password'] -AsPlainText -Force
-   $max_GB_per_snapshot = [int]$config['max_GB_per_snapshot']
-   $max_snapshots_per_vm = [int]$config['max_snapshots_per_vm']
-   $max_snapshot_age_days = [int]$config['max_snapshot_age_days'] 
-   #
-   # Output the variables (optional, for verification)
-   if ($verbose -eq "yes") {
-      Write-Host "Site details"
-      Write-Host "-------------"
-      Write-Host "vCenter host:             $vcenter"
-      Write-Host "Username:                 $username"
-      Write-Host "Max GB per Snapshot:      $max_GB_per_snapshot"
-      Write-Host "Max Snapshots per VM:     $max_snapshots_per_vm"
-      Write-Host "Max Snapshot Age in Days: $max_snapshot_age_days"
-   }
-
-
-
-   # Confirm VMware.PowerCLI module is installed
-   if (-not (Get-Module -Name VMware.PowerCLI -ListAvailable)) {
-      Write-Host "$check_name UNKNOWN - VMware.PowerCLI module is not installed. Please install it before running this script."
-      exit $UNKNOWN
-   }
-
-
-
-   # Connect to vCenter
-   #Connect-VIServer -Server $vcenter
-   $credential = New-Object System.Management.Automation.PSCredential ($username, $password)
-   if ($verbose -eq "yes") { Connect-VIServer -Server $vcenter -Credential $credential            }  #verbose output
-   else {                    Connect-VIServer -Server $vcenter -Credential $credential | Out-Null }  #non-verbose output
-
-
-
-   # Confirm connection to vCenter was successful
-   if (-not $global:DefaultVIServer.IsConnected) {
-       Write-Host "$check_name UNKNOWN Failed to connect to vCenter host $vcenter. Please verify server address and credentials."
-       exit $UNKNOWN
-   }
-
-
-
-   # Retrieve all VMs and their snapshots
-   $snapshots = Get-VM | Get-Snapshot
-
-
-
-   # Put all the snapshot details into an array
-   $results = @()
-   foreach ($snapshot in $snapshots) {
-      $results += [PSCustomObject]@{
-         VMName         = $snapshot.VM.Name
-         SnapshotName   = $snapshot.Name
-         CreatedBy      = $snapshot.CreatedBy
-         CreatedOn      = $snapshot.Created
-         SizeMB         = $snapshot.SizeMB
-         Description    = $snapshot.Description
-      }
-   }
-
-
-
-   # At this point, we have all the info we need from vCenter, so we can disconnect
-   Disconnect-VIServer -Server $vcenter -Confirm:$false
-
-
-
-   # Display the snapshot details
-   if ($verbose -eq "yes") { $results | Format-Table -AutoSize }
-
-
-
-   # Get the total number of snapshots
-   # This value will be used later in the nagios message output.
-   $totalSnapshots = $snapshots.Count
-
-
-
-   # Find any snapshots larger than the size threshold in GB 
-   $snapshots_too_big = @()   #initialize array
-   $snapshots_too_big = $snapshots | Where-Object { $_.SizeMB -gt ($max_gb_per_snapshot * 1024) } | ForEach-Object {
-      [PSCustomObject]@{
-         SnapshotName = $_.Name
-         VMName       = $_.VM.Name
-         SizeGB       = [math]::Round($_.SizeMB / 1024, 0)
-      }
-      $error_count += 1
-      $error_message = "$error_message '$($_.VM.Name)' snapshot '$($_.Name)' is $([math]::Round($_.SizeMB/1024,0)) GB in size, max is $max_gb_per_snapshot GB."
-   }
-
-
-
-   # Find any snapshots older than $max_snapshot_age_days days
-   $thresholdDate = (Get-Date).AddDays(-$max_snapshot_age_days)
-   $snapshots | Where-Object { $_.Created -lt $thresholdDate } | ForEach-Object {
-      $snapshotAgeDays = (Get-Date) - $snapshot.Created 		# Calculate snapshot age
-      $snapshotAgeDays = [math]::Round($snapshotAgeDays.TotalDays, 0) 	# Round to 0 decimal places, nearest day is good enough
-      $error_count += 1
-      $error_message = "$error_message '$($_.VM.Name)' snapshot '$($_.Name)' is $snapshotAgeDays days old, which exceeds max age of $max_snapshot_age_days days."
-      if ($verbose -eq "yes") { 
-         #Write-Host "VM '$($_.VM.Name)' snapshot '$($_.Name)' is older than $max_snapshot_age_days days."
-         Write-Host " '$($_.VM.Name)' snapshot '$($_.Name)' is $snapshotAgeDays days old, which exceeds max age of $max_snapshot_age_days days."
-      }
-   }
-
-
-
-
-
-
-
-
-
-
-   # Find the snapshot with the oldest date
-   $oldestSnapshot = $snapshots | Sort-Object Created | Select-Object -First 1
-   if ($oldestSnapshot) {
-      $oldestSnapshotDays = $(((Get-Date) - $oldestSnapshot.Created).TotalDays)
-      $oldestSnapshotDays = [math]::Round($oldestSnapshotDays,1)  #round to 1 decimal place
-      if ($verbose -eq "yes") { 
-      Write-Host ""
-      Write-Host "---------------------------"
-         Write-Host "The oldest snapshot is '$($oldestSnapshot.Name)' on VM '$($oldestSnapshot.VM.Name)' created $oldestSnapshotDays days ago."
-      }
-   }
-
-
-
-   # Find the snapshot with the largest size
-   $largestSnapshot = $snapshots | Sort-Object SizeMB -Descending | Select-Object -First 1
-   if ($largestSnapshot) {
-      $largestSnapshotSizeGB = [math]::Round($largestSnapshot.SizeMB / 1024, 0)
-      if ($verbose -eq "yes") {
-         Write-Host "The largest snapshot is '$($largestSnapshot.Name)' on VM '$($largestSnapshot.VM.Name)' with a size of $largestSnapshotSizeGB GB."
-      }
-   }
-
-
-
-   # Calculate the total size of all snapshots in GB, rounded to 0 decimal places (closest GB is good enough)
-   $totalSnapshotSizeGB = [math]::Round(($snapshots | Measure-Object -Property SizeMB -Sum).Sum / 1024, 0)
-   if ($verbose -eq "yes") { Write-Host "Total size of all snapshots: $totalSnapshotSizeGB GB" }
-
-   # Calculate the total SizeMB for each VMName
-   $totalSizePerVM = $results | Group-Object -Property VMName | ForEach-Object {
-      [PSCustomObject]@{
-         VMName      = $_.Name
-         TotalSizeMB = ($_.Group | Measure-Object -Property SizeMB -Sum).Sum
-      }
-   }
-   # Display the total size per VM
-   if ($verbose -eq "yes") {
-      Write-Host ""
-      Write-Host "---------------------------"
-      Write-Host "Total snapshot size per VM:"
-      $totalSizePerVM | Format-Table -AutoSize
-   }
-
-
-
-   # Calculate the number of snapshots per VMName using an incremental counter
-   $snapshotsPerVM = @{}
-   foreach ($snapshot in $snapshots) {
-     if (-not $snapshotsPerVM.ContainsKey($snapshot.VM.Name)) {
-        $snapshotsPerVM[$snapshot.VM.Name] = 0
-     }
-     $snapshotsPerVM[$snapshot.VM.Name] += 1
-   }
-   # Convert the dictionary to an array of objects for display
-   $snapshotsPerVMObjects = $snapshotsPerVM.GetEnumerator() | ForEach-Object {
-      [PSCustomObject]@{
-         VMName         = $_.Key
-         SnapshotCount  = $_.Value
-      }
-   }
-   if ($verbose -eq "yes") {
-      Write-Host ""
-      Write-Host "---------------------------"
-      Write-Host "Number of snapshots per VM:"
-      $snapshotsPerVMObjects | Format-Table -AutoSize
-   }
-
-
-
-   # Find any VM that has more snapshots than the threshold of $max_snapshots_per_vm
-   $snapshotsPerVMObjects | Where-Object { $_.SnapshotCount -gt $max_snapshots_per_vm } | ForEach-Object {
-      $error_count += 1
-      $error_message = "$error_message '$($_.VMname)' has $($_.SnapshotCount) snapshots, max is $max_snapshots_per_vm."
-      if ($verbose -eq "yes") { 
-      Write-Host ""
-      Write-Host "---------------------------"
-         Write-Host "VM '$($_.VMName)' has a total of $($_.SnapshotCount) snapshots, max snapshots per VM is $max_snapshots_per_vm." 
-      }
-   }
-
-   
-
-   # Optional verbose output to the screen that shows each error on a separate line (split by the . character), used for debugging.
-   if (($error_count -gt 0) -and ($verbose -eq "yes")) { 
-      Write-Host ""
-      Write-Host "------------------"
-      Write-Host "All problems found:"
-      $lines = $error_message -split '\.'   		#split the multi-line text string on the . character
-      $lines | ForEach-Object { Write-Host $_ }		#output each line
-      Write-Host ""
-   }
-
-
-
-   # Print any errors that were found in the format expected by nagios
-   if ($error_count -gt 0) {
-      Write-Host "$check_name WARN, $error_count issues found, please cleanup snapshots.  $error_message  total_snapshots:$totalSnapshots  largest_single_snapshot:$largestSnapshotSizeGB GB , total_size:$totalSnapshotSizeGB GB , oldest_snapshot:$oldestSnapshotDays days"
-      exit $WARN
-   }
-
-
-
-   # If we get this far, everything is ok.
-   if ($error_count -eq 0) {
-      if ($totalSnapshots -eq 0) { 
-         Write-Host "$check_name OK total_snapshots:$totalSnapshots"
-         exit $OK
-      }
-      if ($totalSnapshots -gt 0) { 
-         Write-Host "$check_name OK total_snapshots:$totalSnapshots  largest_snapshot:$largestSnapshotSizeGB GB , total_size:$totalSnapshotSizeGB GB , oldest_snapshot:$oldestSnapshotDays days"
-         exit $OK
-      }
-   }
-}     							 #end of function
-
+# declare variables
+$check_name              = "VMware snapshots"  	#name of check 
+$verbose                 = "no"			#yes|no flag to increase verbosity for debugging
+$error_count             = 0  			#initialize counter variable
+$error_message           = "" 			#initialize string variable used to hold message text
 #
-# call the above function
+# nagios return codes
+$OK=0
+$WARN=1
+$CRITICAL=2
+$UNKNOWN=3
+
+
+
+# Import site-specific details from config file.
+# If you have multiple vCenter hosts, you can pass a custom config file as a command line parameter.
+# There should be a check_vmware_snapshots.cfg file in the same directory as this script, with contents similar to the following.
+# Note that all lines in the config file starting with # will be ignored, so you can include comments.
+#vcenter=vcsa.example.com
+#username=nagios@vsphere.local
+#password=MySecretPassw0rd!
+#max_gb_per_snapshot=10
+#max_snapshots_per_vm=3
+#max_snapshot_age_days=7
 #
-Get-VMware-Snapshots
+#
+#
+# Define the default path to the configuration file that will be used if no command line parameter is provided
+# If a command line argument was provided, use that as the configuration file.  This allows for multiple vCenter hosts.
+if ($args.Count -gt 0) { 
+   $configFilePath = $args[0] 
+   if ($verbose -eq "yes") { Write-Host "Using custom config file $configFilePath" }
+} else { 
+   $configFilePath = "/usr/local/nagios/libexec/check_vmware_snapshots.cfg"   #use the default if no parameter was provided
+   if ($verbose -eq "yes") { Write-Host "Using default config file $configFilePath" }
+}
+ 
+# Confirm the configuration file exists
+if (-Not (Test-Path $configFilePath)) {
+   Write-Host "$check_name UNKNOWN - could not find configuration file $configFilePath"
+   exit $UNKNOWN
+}
+ 
+ 
+# Read the configuration file
+$config = @{}
+Get-Content $configFilePath | ForEach-Object {
+   if ($_ -match "^(?<Key>[^=]+)=(?<Value>.+)$") {
+      $config[$Matches.Key] = $Matches.Value
+   }
+}
+ 
+# Populate variables from the configuration
+$vCenter = $config['vCenter']
+$username = $config['username']
+$password = ConvertTo-SecureString $config['password'] -AsPlainText -Force
+$max_GB_per_snapshot = [int]$config['max_GB_per_snapshot']
+$max_snapshots_per_vm = [int]$config['max_snapshots_per_vm']
+$max_snapshot_age_days = [int]$config['max_snapshot_age_days'] 
+
+
+ 
+# Output the variables (optional, for verification)
+if ($verbose -eq "yes") {
+   Write-Host "Site details"
+   Write-Host "-------------"
+   Write-Host "vCenter host:             $vcenter"
+   Write-Host "Username:                 $username"
+   Write-Host "Max GB per Snapshot:      $max_GB_per_snapshot"
+   Write-Host "Max Snapshots per VM:     $max_snapshots_per_vm"
+   Write-Host "Max Snapshot Age in Days: $max_snapshot_age_days"
+}
+
+
+
+# Confirm VMware.PowerCLI module is installed
+if (-not (Get-Module -Name VMware.PowerCLI -ListAvailable)) {
+   Write-Host "$check_name UNKNOWN - VMware.PowerCLI module is not installed. Please install it before running this script."
+   exit $UNKNOWN
+}
+
+
+
+# Connect to vCenter
+#Connect-VIServer -Server $vcenter
+$credential = New-Object System.Management.Automation.PSCredential ($username, $password)
+if ($verbose -eq "yes") { Connect-VIServer -Server $vcenter -Credential $credential            }  #verbose output
+else {                    Connect-VIServer -Server $vcenter -Credential $credential | Out-Null }  #non-verbose output
+
+
+
+# Confirm connection to vCenter was successful
+if (-not $global:DefaultVIServer.IsConnected) {
+    Write-Host "$check_name UNKNOWN Failed to connect to vCenter host $vcenter. Please verify server address and credentials."
+    exit $UNKNOWN
+}
+
+
+
+# Retrieve all VMs and their snapshots
+$snapshots = Get-VM | Get-Snapshot
+
+
+
+# Put all the snapshot details into an array
+$results = @()
+foreach ($snapshot in $snapshots) {
+   $results += [PSCustomObject]@{
+      VMName         = $snapshot.VM.Name
+      SnapshotName   = $snapshot.Name
+      CreatedBy      = $snapshot.CreatedBy
+      CreatedOn      = $snapshot.Created
+      SizeMB         = $snapshot.SizeMB
+      Description    = $snapshot.Description
+   }
+}
+
+
+
+# At this point, we have all the info we need from vCenter, so we can disconnect
+Disconnect-VIServer -Server $vcenter -Confirm:$false
+
+
+
+# Display the snapshot details
+if ($verbose -eq "yes") { $results | Format-Table -AutoSize }
+
+
+
+# Get the total number of snapshots
+# This value will be used later in the nagios message output.
+$totalSnapshots = $snapshots.Count
+
+
+
+# Find any snapshots larger than the size threshold in GB 
+$snapshots_too_big = @()   #initialize array
+$snapshots_too_big = $snapshots | Where-Object { $_.SizeMB -gt ($max_gb_per_snapshot * 1024) } | ForEach-Object {
+   [PSCustomObject]@{
+      SnapshotName = $_.Name
+      VMName       = $_.VM.Name
+      SizeGB       = [math]::Round($_.SizeMB / 1024, 0)
+   }
+   $error_count += 1
+   $error_message = "$error_message '$($_.VM.Name)' snapshot '$($_.Name)' is $([math]::Round($_.SizeMB/1024,0)) GB in size, max is $max_gb_per_snapshot GB."
+}
+
+
+
+# Find any snapshots older than $max_snapshot_age_days days
+$thresholdDate = (Get-Date).AddDays(-$max_snapshot_age_days)
+$snapshots | Where-Object { $_.Created -lt $thresholdDate } | ForEach-Object {
+   $snapshotAgeDays = (Get-Date) - $snapshot.Created 		# Calculate snapshot age
+   $snapshotAgeDays = [math]::Round($snapshotAgeDays.TotalDays, 0) 	# Round to 0 decimal places, nearest day is good enough
+   $error_count += 1
+   $error_message = "$error_message '$($_.VM.Name)' snapshot '$($_.Name)' is $snapshotAgeDays days old, which exceeds max age of $max_snapshot_age_days days."
+   if ($verbose -eq "yes") { 
+      Write-Host " '$($_.VM.Name)' snapshot '$($_.Name)' is $snapshotAgeDays days old, which exceeds max age of $max_snapshot_age_days days."
+   }
+}
+
+
+# Find the snapshot with the oldest date
+$oldestSnapshot = $snapshots | Sort-Object Created | Select-Object -First 1
+if ($oldestSnapshot) {
+   $oldestSnapshotDays = $(((Get-Date) - $oldestSnapshot.Created).TotalDays)
+   $oldestSnapshotDays = [math]::Round($oldestSnapshotDays,1)  #round to 1 decimal place
+   if ($verbose -eq "yes") { 
+   Write-Host ""
+   Write-Host "---------------------------"
+      Write-Host "The oldest snapshot is '$($oldestSnapshot.Name)' on VM '$($oldestSnapshot.VM.Name)' created $oldestSnapshotDays days ago."
+   }
+}
+
+
+
+# Find the snapshot with the largest size
+$largestSnapshot = $snapshots | Sort-Object SizeMB -Descending | Select-Object -First 1
+if ($largestSnapshot) {
+   $largestSnapshotSizeGB = [math]::Round($largestSnapshot.SizeMB / 1024, 0)
+   if ($verbose -eq "yes") {
+      Write-Host "The largest snapshot is '$($largestSnapshot.Name)' on VM '$($largestSnapshot.VM.Name)' with a size of $largestSnapshotSizeGB GB."
+   }
+}
+
+
+
+# Calculate the total size of all snapshots in GB, rounded to 0 decimal places (closest GB is good enough)
+$totalSnapshotSizeGB = [math]::Round(($snapshots | Measure-Object -Property SizeMB -Sum).Sum / 1024, 0)
+if ($verbose -eq "yes") { Write-Host "Total size of all snapshots: $totalSnapshotSizeGB GB" }
+
+# Calculate the total SizeMB for each VMName
+$totalSizePerVM = $results | Group-Object -Property VMName | ForEach-Object {
+   [PSCustomObject]@{
+      VMName      = $_.Name
+      TotalSizeMB = ($_.Group | Measure-Object -Property SizeMB -Sum).Sum
+   }
+}
+# Display the total size per VM
+if ($verbose -eq "yes") {
+   Write-Host ""
+   Write-Host "---------------------------"
+   Write-Host "Total snapshot size per VM:"
+   $totalSizePerVM | Format-Table -AutoSize
+}
+
+
+
+# Calculate the number of snapshots per VMName using an incremental counter
+$snapshotsPerVM = @{}
+foreach ($snapshot in $snapshots) {
+  if (-not $snapshotsPerVM.ContainsKey($snapshot.VM.Name)) {
+     $snapshotsPerVM[$snapshot.VM.Name] = 0
+  }
+  $snapshotsPerVM[$snapshot.VM.Name] += 1
+}
+# Convert the dictionary to an array of objects for display
+$snapshotsPerVMObjects = $snapshotsPerVM.GetEnumerator() | ForEach-Object {
+   [PSCustomObject]@{
+      VMName         = $_.Key
+      SnapshotCount  = $_.Value
+   }
+}
+if ($verbose -eq "yes") {
+   Write-Host ""
+   Write-Host "---------------------------"
+   Write-Host "Number of snapshots per VM:"
+   $snapshotsPerVMObjects | Format-Table -AutoSize
+}
+
+
+
+# Find any VM that has more snapshots than the threshold of $max_snapshots_per_vm
+$snapshotsPerVMObjects | Where-Object { $_.SnapshotCount -gt $max_snapshots_per_vm } | ForEach-Object {
+   $error_count += 1
+   $error_message = "$error_message '$($_.VMname)' has $($_.SnapshotCount) snapshots, max is $max_snapshots_per_vm."
+   if ($verbose -eq "yes") { 
+   Write-Host ""
+   Write-Host "---------------------------"
+      Write-Host "VM '$($_.VMName)' has a total of $($_.SnapshotCount) snapshots, max snapshots per VM is $max_snapshots_per_vm." 
+   }
+}
+
+
+
+# Optional verbose output to the screen that shows each error on a separate line (split by the . character), used for debugging.
+if (($error_count -gt 0) -and ($verbose -eq "yes")) { 
+   Write-Host ""
+   Write-Host "------------------"
+   Write-Host "All problems found:"
+   $lines = $error_message -split '\.'   		#split the multi-line text string on the . character
+   $lines | ForEach-Object { Write-Host $_ }		#output each line
+   Write-Host ""
+}
+
+
+
+# Print any errors that were found in the format expected by nagios
+if ($error_count -gt 0) {
+   Write-Host "$check_name WARN, $error_count issues found, please cleanup snapshots.  $error_message  total_snapshots:$totalSnapshots  largest_single_snapshot:$largestSnapshotSizeGB GB , total_size:$totalSnapshotSizeGB GB , oldest_snapshot:$oldestSnapshotDays days"
+   exit $WARN
+}
+
+
+
+# If we get this far, everything is ok.
+if ($error_count -eq 0) {
+   if ($totalSnapshots -eq 0) { 
+      Write-Host "$check_name OK total_snapshots:$totalSnapshots"
+      exit $OK
+   }
+   if ($totalSnapshots -gt 0) { 
+      Write-Host "$check_name OK total_snapshots:$totalSnapshots  largest_snapshot:$largestSnapshotSizeGB GB , total_size:$totalSnapshotSizeGB GB , oldest_snapshot:$oldestSnapshotDays days"
+      exit $OK
+   }
+}
+
 
 
