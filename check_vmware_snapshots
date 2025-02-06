@@ -65,6 +65,7 @@ if ($args.Count -gt 0) {
    $configFilePath = "/usr/local/nagios/libexec/check_vmware_snapshots.cfg"   #use the default if no parameter was provided
    if ($verbose -eq "yes") { Write-Host "Using default config file $configFilePath" }
 }
+
  
 # Confirm the configuration file exists
 if (-Not (Test-Path $configFilePath)) {
@@ -80,6 +81,7 @@ Get-Content $configFilePath | ForEach-Object {
       $config[$Matches.Key] = $Matches.Value
    }
 }
+
  
 # Populate variables from the configuration
 $vCenter = $config['vCenter']
@@ -88,7 +90,6 @@ $password = ConvertTo-SecureString $config['password'] -AsPlainText -Force
 $max_GB_per_snapshot = [int]$config['max_GB_per_snapshot']
 $max_snapshots_per_vm = [int]$config['max_snapshots_per_vm']
 $max_snapshot_age_days = [int]$config['max_snapshot_age_days'] 
-
 
  
 # Output the variables (optional, for verification)
@@ -113,7 +114,6 @@ if (-not (Get-Module -Name VMware.PowerCLI -ListAvailable)) {
 
 
 # Connect to vCenter
-#Connect-VIServer -Server $vcenter
 $credential = New-Object System.Management.Automation.PSCredential ($username, $password)
 if ($verbose -eq "yes") { Connect-VIServer -Server $vcenter -Credential $credential            }  #verbose output
 else {                    Connect-VIServer -Server $vcenter -Credential $credential | Out-Null }  #non-verbose output
