@@ -2,7 +2,7 @@
 nagios check using VMware PowerCLI for snapshot health
 
 # Requirements
-PowerShell for Linux and VMware PowerCLI installed on nagios server
+PowerShell for Linux and VMware PowerCLI powershell module installed on Linux-based nagios server, low-privileged read-only user on vCenter.
 
 # Install PowerShell on Linux (with internet access)
 
