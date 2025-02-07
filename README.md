@@ -208,13 +208,13 @@ scp -r c:\Temp\VMwarePowerCLI username@MyNagiosHost:/tmp
 
 On the Linux-based nagios server, figure out the paths where PowerShell looks for installed modules
 ```
-PS /tmp/VMwarePowerCLI> $env:PSModulePath -split ':'
+PS> $env:PSModulePath -split ':'
 /root/.local/share/powershell/Modules
 /usr/local/share/powershell/Modules
 /opt/microsoft/powershell/7/Modules
 ```
 
-In the above example, there are three locations that PowerShell looks for installed modules, we want the system-wide option, which is /usr/local/share/powershell/Modules.  Copy the files from the temporary location.
+In the above example, there are three locations that PowerShell looks for installed modules, we want the system-wide option, which is /usr/local/share/powershell/Modules.  Copy the files from the temporary location to the location that PowerShell expects the modules.
 ```
 PS> Copy-Item -Path "/tmp/VMwarePowerCLI" -Destination /usr/local/share/powershell/Modules -Recurse
 ```
