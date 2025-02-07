@@ -228,7 +228,7 @@ PS> Import-Module VMware.PowerCLI
 
 Confirm that the VMware.PowerCLI module is installed:
 ```
-PS /> Get-Module VMware.PowerCLI
+PS> Get-Module VMware.PowerCLI
 
 ModuleType Version    PreRelease Name              ExportedCommands
 ---------- -------    ---------- ----              ----------------
