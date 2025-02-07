@@ -50,12 +50,23 @@ PowerShell 7.4.6
 PS /home/someuser> Install-Module -Name VMware.PowerCLI -Scope AllUsers
 ```
 
+Confirm that the VMware.PowerCLI module is installed:
+```
+PS /> Get-Module VMware.PowerCLI
+
+ModuleType Version    PreRelease Name              ExportedCommands
+---------- -------    ---------- ----              ----------------
+Manifest   13.3.0.24…            VMware.PowerCLI
+```
+
+
 Disable the PowerCLI call-home to VMware for usage statistics reporting.
 ```
 [root@linuxbox]# pwsh
 PowerShell 7.4.6
 PS> Set-PowerCLIConfiguration -Scope AllUsers -ParticipateInCEIP $false
 ```
+
 
 # Install PowerShell on Linux (without internet access)
 
@@ -193,6 +204,42 @@ d-----          2/7/2025  10:34 AM                VMware.VumAutomation
 Now that you have downloaded the packages using a machine with internet access, copy the files over to a temporary location on the nagios server.
 ```
 scp -r c:\Temp\VMwarePowerCLI username@MyNagiosHost:/tmp
+```
+
+On the Linux-based nagios server, figure out the paths where PowerShell looks for installed modules
+```
+PS /tmp/VMwarePowerCLI> $env:PSModulePath -split ':'
+/root/.local/share/powershell/Modules
+/usr/local/share/powershell/Modules
+/opt/microsoft/powershell/7/Modules
+```
+
+In the above example, there are three locations that PowerShell looks for installed modules, we want the system-wide option, which is /usr/local/share/powershell/Modules.  Copy the files from the temporary location.
+```
+PS> Copy-Item -Path "/tmp/VMwarePowerCLI" -Destination /usr/local/share/powershell/Modules -Recurse
+```
+
+
+Now that the files have been copied to the expected location, you can import the module:
+```
+PS> Import-Module VMware.PowerCLI
+```
+
+
+Confirm that the VMware.PowerCLI module is installed:
+```
+PS /> Get-Module VMware.PowerCLI
+
+ModuleType Version    PreRelease Name              ExportedCommands
+---------- -------    ---------- ----              ----------------
+Manifest   13.3.0.24…            VMware.PowerCLI
+```
+
+Disable the PowerCLI call-home to VMware for usage statistics reporting.
+```
+[root@linuxbox]# pwsh
+PowerShell 7.4.6
+PS> Set-PowerCLIConfiguration -Scope AllUsers -ParticipateInCEIP $false
 ```
 
 
