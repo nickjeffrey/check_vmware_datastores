@@ -4,7 +4,9 @@ nagios check using VMware PowerCLI for snapshot health
 # Requirements
 PowerShell for Linux and VMware PowerCLI installed on nagios server
 
-# Installation Steps
+# Install PowerShell on Linux (with internet access)
+
+This section assumes that the Linux-based nagios server has access to the internet for downloading packages via HTTPS.
 
 Install PowerShell on the Linux-based nagios server.
 
@@ -13,6 +15,10 @@ More details at https://learn.microsoft.com/en-us/powershell/scripting/install/i
 which yum && yum install https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-1.rh.x86_64.rpm
 which apt && apt install https://github.com/PowerShell/PowerShell/releases/download/v7.4.7/powershell_7.4.7-1.deb_amd64.deb
 ```
+
+# Install VMware.PowerCLI module on Linux (with internet access)
+
+This section assumes that the Linux-based nagios server has access to the internet for downloading packages via HTTPS.
 
 Confirm that the Linux-based nagios server has access to the PSGallery repository.
 ```
@@ -50,6 +56,148 @@ Disable the PowerCLI call-home to VMware for usage statistics reporting.
 PowerShell 7.4.6
 PS> Set-PowerCLIConfiguration -Scope AllUsers -ParticipateInCEIP $false
 ```
+
+# Install PowerShell on Linux (without internet access)
+
+This section assumes that the Linux-based nagios server does not have access to the internet for downloading packages via HTTPS, so you will need to manually download packages on another system that does have internet access, and then copy those files to the Linux-based nagios server.
+
+Install PowerShell on the Linux-based nagios server.
+
+More details at https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux
+
+In this example, download the appropriate RPM or DEB package to a machine that has internet access.  
+```
+cd c:\temp
+curl -o powershell-7.4.6-1.rh.x86_64.rpm https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-1.rh.x86_64.rpm
+curl -o powershell_7.4.7-1.deb_amd64.deb https://github.com/PowerShell/PowerShell/releases/download/v7.4.7/powershell_7.4.7-1.deb_amd64.deb
+```
+
+Now that you have downloaded the appropriate RPM or DEB package, copy it over to the nagios server.
+```
+scp powershell* username@MyNagiosHost:/tmp
+```
+
+SSH into the nagios server and install the manually downloaded package.  Adjust package names as appropriate as newer versions are released.
+```
+which yum  && yum install /tmp/powershell-7.4.6-1.rh.x86_64.rpm
+which dpkg && dpkg -i     /tmp/powershell_7.4.7-1.deb_amd64.deb
+```
+
+# Install VMware.PowerCLI module on Linux (without internet access)
+
+This section assumes that the Linux-based nagios server does not have access to the internet for downloading packages via HTTPS, so you will need to manually download packages on another system that does have internet access, and then copy those files to the Linux-based nagios server.
+
+On a machine that does have internet access, download the VMware.PowerCLI module to a temporary location.
+```
+PS> md C:\Temp\VMwarePowerCLI
+PS> cd C:\Temp\VMwarePowerCLI
+PS> Save-Module -Name VMware.PowerCLI -Path C:\Temp\VMwarePowerCLI
+```
+
+You will now see lots of subdirectories in the temporary location you downloaded the module and dependencies to:
+```
+PS C:\Temp\VMwarePowerCLI> ls
+
+
+    Directory: C:\Temp\VMwarePowerCLI
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----          2/7/2025  10:33 AM                VMware.CloudServices
+d-----          2/7/2025  10:34 AM                VMware.DeployAutomation
+d-----          2/7/2025  10:34 AM                VMware.ImageBuilder
+d-----          2/7/2025  10:35 AM                VMware.PowerCLI
+d-----          2/7/2025  10:34 AM                VMware.PowerCLI.Sdk
+d-----          2/7/2025  10:34 AM                VMware.PowerCLI.Sdk.Types
+d-----          2/7/2025  10:35 AM                VMware.PowerCLI.VCenter
+d-----          2/7/2025  10:34 AM                VMware.PowerCLI.VCenter.Types.ApplianceService
+d-----          2/7/2025  10:34 AM                VMware.PowerCLI.VCenter.Types.CertificateManagement
+d-----          2/7/2025  10:35 AM                VMware.Sdk.Nsx.Policy
+d-----          2/7/2025  10:34 AM                VMware.Sdk.Runtime
+d-----          2/7/2025  10:35 AM                VMware.Sdk.Srm
+d-----          2/7/2025  10:35 AM                VMware.Sdk.Vcf.CloudBuilder
+d-----          2/7/2025  10:35 AM                VMware.Sdk.Vcf.SddcManager
+d-----          2/7/2025  10:35 AM                VMware.Sdk.Vr
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Access
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Health
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.InfraProfile
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.LocalAccounts
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Logging
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Networking
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Recovery
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.SupportBundle
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.System
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Tls
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Appliance.Update
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Cis
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Cis.Tagging
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Content
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.ContentLibrary
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Esx.Hcl
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Esx.Hosts
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.Esx.Settings
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.SnapService
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.VAPI.Metadata
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Authentication
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Authorization
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.CertManagement
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.ConsumptionDomains
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Content
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Datastore
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Deployment
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Guest
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.HVC
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Identity
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Inventory
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.ISO
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.LCM
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.NamespaceManagement
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Namespaces
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.OVF
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Services
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Storage
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.SystemConfig
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Tagging
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Topology
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.TrustedInfrastructure
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.VCHA
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.Vm
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vCenter.VmTemplate
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphere.vStats
+d-----          2/7/2025  10:34 AM                VMware.Sdk.vSphereRuntime
+d-----          2/7/2025  10:33 AM                VMware.Vim
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Cis.Core
+d-----          2/7/2025  10:34 AM                VMware.VimAutomation.Cloud
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Common
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Core
+d-----          2/7/2025  10:34 AM                VMware.VimAutomation.Hcx
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.License
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Nsxt
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Sdk
+d-----          2/7/2025  10:34 AM                VMware.VimAutomation.Security
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Srm
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Storage
+d-----          2/7/2025  10:34 AM                VMware.VimAutomation.StorageUtility
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Vds
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.Vmc
+d-----          2/7/2025  10:33 AM                VMware.VimAutomation.vROps
+d-----          2/7/2025  10:34 AM                VMware.VimAutomation.WorkloadManagement
+d-----          2/7/2025  10:34 AM                VMware.VumAutomation
+```
+
+
+Now that you have downloaded the packages using a machine with internet access, copy the files over to a temporary location on the nagios server.
+```
+scp -r c:\Temp\VMwarePowerCLI username@MyNagiosHost:/tmp
+```
+
+
+
+# vCenter configuration
 
 ## create vCenter userid
 
@@ -97,7 +245,7 @@ Click OK
 
 # Nagios configuration
 
-Copy the check script and config file to the appropriate plugins folder and confirm the script is executable
+Copy the check script and config file to the appropriate plugins folder and confirm the script is executable.  HINT: if you cannot run "git clone", manually copy and paste the file contents from the github page.
 ```
 su - nagios
 cd /tmp
