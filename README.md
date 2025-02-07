@@ -14,7 +14,30 @@ which yum && yum install https://github.com/PowerShell/PowerShell/releases/downl
 which apt && apt install https://github.com/PowerShell/PowerShell/releases/download/v7.4.7/powershell_7.4.7-1.deb_amd64.deb
 ```
 
-Add VMware PowerCLI from the PowerShell Gallery
+Confirm that the Linux-based nagios server has access to the PSGallery repository.
+```
+[root@linuxbox]# pwsh
+PowerShell 7.4.6
+PS> Get-PSRepository
+
+Name          InstallationPolicy   SourceLocation
+----          ------------------   --------------
+PSGallery     Untrusted            https://www.powershellgallery.com/api/v2
+```
+
+If the PSGallery repository was not shown in the previous command, you will need to register that repository with the following commands.  Please note that internet access is required.
+```
+PS>  Register-PSRepository -Name 'PSGallery' -SourceLocation 'https://www.powershellgallery.com/api/v2/' -InstallationPolicy 'Trusted'
+PS>  Get-PSRepository
+```
+Or if the above commands do not work, try these:
+```
+PS>  Register-PSRepository -Default
+PS>  Get-PSRepository
+```
+
+
+Once you have confirmed that the PSGallery repository is available, add the VMware PowerCLI module from the PowerShell Gallery.  This command assumes the nagios server has internet access to obtain the packages.
 ```
 [root@linuxbox]# pwsh
 PowerShell 7.4.6
