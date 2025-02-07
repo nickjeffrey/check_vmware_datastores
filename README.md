@@ -98,7 +98,7 @@ which dpkg && dpkg -i     /tmp/powershell_7.4.7-1.deb_amd64.deb
 
 This section assumes that the Linux-based nagios server does not have access to the internet for downloading packages via HTTPS, so you will need to manually download packages on another system that does have internet access, and then copy those files to the Linux-based nagios server.
 
-On a machine that does have internet access, download the VMware.PowerCLI module to a temporary location.
+On a machine that does have internet access, download the VMware.PowerCLI module to a temporary location.  This assumes you have access to the PSGallery repository.
 ```
 PS> md C:\Temp\VMwarePowerCLI
 PS> cd C:\Temp\VMwarePowerCLI
